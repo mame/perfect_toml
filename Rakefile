@@ -10,7 +10,7 @@ end
 
 TOML_TEST = "./toml-test-v1.2.0-linux-amd64"
 
-task :download_toml_test => TOML_TEST do
+file TOML_TEST do
   require "open-uri"
   require "zlib"
   URI.open("https://github.com/BurntSushi/toml-test/releases/download/v1.2.0/toml-test-v1.2.0-linux-amd64.gz", "rb") do |f|
@@ -19,11 +19,11 @@ task :download_toml_test => TOML_TEST do
   end
 end
 
-task :toml_decoder_test => :download_toml_test do
+task :toml_decoder_test => TOML_TEST do
   sh "./toml-test-v1.2.0-linux-amd64", "./tool/decoder.rb"
 end
 
-task :toml_encoder_test => :download_toml_test do
+task :toml_encoder_test => TOML_TEST do
   ["0000", "1000", "0010", "0001", "0011"].each do |mode|
     ENV["TOML_ENCODER_USE_DOT"] = mode[0]
     ENV["TOML_ENCODER_SORT_KEYS"] = mode[1]
