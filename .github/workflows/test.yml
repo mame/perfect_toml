@@ -1,0 +1,25 @@
+name: test
+
+on: [push,pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version: [2.6, 2.7, 3.0, 3.1, head]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+    - name: Bundle install
+      run: |
+        bundle install
+    - name: Run the test suite
+      run: |
+        bundle exec rake TESTOPT=-v
