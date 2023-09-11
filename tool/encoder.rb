@@ -11,7 +11,7 @@ def convert(json)
     case type
     when "integer" then val.to_i
     when "float"
-      case val
+      case val.downcase
       when "inf", "+inf" then Float::INFINITY
       when "-inf" then -Float::INFINITY
       when "nan" then -Float::NAN
@@ -31,7 +31,7 @@ def convert(json)
       raise if val !~ /\A(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)\z/
       PerfectTOML::LocalTime.new($1, $2, $3)
     else
-      raise "unknown type: %p" % type
+      json.to_h {|k, v| [k, convert(v)] }
     end
   else
     json.to_h {|k, v| [k, convert(v)] }
