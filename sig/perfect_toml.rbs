@@ -4,9 +4,9 @@ module PerfectTOML
   def self.parse: (String toml_src, symbolize_names: bool) -> untyped
   def self.load_file: (String filename, symbolize_names: bool) -> untyped
                     | (IO io, symbolize_names: bool) -> untyped
-  def self.generate: (
-  def self.save_file: (String filename, untyped data, sort_keys: boolean, use_literal_string: boolean, use_multiline_string: boolean, use_dot: boolean) -> String) -> void
-                    | (IO io, untyped data, sort_keys: boolean, use_literal_string: boolean, use_multiline_string: boolean, use_dot: boolean) -> String) -> void
+  def self.generate: (untyped data, sort_keys: boolean, use_literal_string: boolean, use_multiline_string: boolean, use_dot: boolean) -> String
+  def self.save_file: (String filename, untyped data, sort_keys: boolean, use_literal_string: boolean, use_multiline_string: boolean, use_dot: boolean) -> void
+                    | (IO io, untyped data, sort_keys: boolean, use_literal_string: boolean, use_multiline_string: boolean, use_dot: boolean) -> void
 
   class LocalDateTime
     def initialize: (untyped year, untyped month, untyped day, untyped hour, untyped min, untyped sec) -> void
