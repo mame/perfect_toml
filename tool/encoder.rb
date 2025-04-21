@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env -S ruby --disable-gems
 
 require_relative "../lib/perfect_toml"
 require "json"
