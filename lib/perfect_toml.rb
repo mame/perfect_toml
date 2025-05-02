@@ -278,7 +278,7 @@ module PerfectTOML
   #   # output:
   #   #   a.b.c.d = 42
   def self.generate(hash, **opts)
-    out = ""
+    out = +""
     Generator.new(hash, out, **opts).generate
     out
   end
@@ -395,7 +395,7 @@ module PerfectTOML
     end
 
     def parse_basic_string
-      str = ""
+      str = +""
       while true
         str << @s.scan(/[^\x00-\x08\x0a-\x1f\x7f"\\]*/)
         return str if @s.skip(/"/)
@@ -407,7 +407,7 @@ module PerfectTOML
       # skip a newline
       @s.skip(/\n|\r\n/)
 
-      str = ""
+      str = +""
       while true
         str << @s.scan(/[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f"\\]*/)
         delimiter = @s.skip(/"{1,5}/)
@@ -432,7 +432,7 @@ module PerfectTOML
       # skip a newline
       @s.skip(/\n|\r\n/)
 
-      str = ""
+      str = +""
       while true
         str << @s.scan(/[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f']*/)
         if delimiter = @s.skip(/'{1,5}/)
