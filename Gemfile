@@ -9,3 +9,5 @@ gem "test-unit", "~> 3.0"
 gem "simplecov", "~> 0.21.2"
 
 gem "json", ">= 2.7.2"
+
+gem "rdoc", "~> 6.13"
