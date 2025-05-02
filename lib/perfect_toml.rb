@@ -846,7 +846,7 @@ module PerfectTOML
             break unless v
             v
           end
-          if ary
+          if ary && !ary.empty?
             children << [:array, k, ary]
           else
             values << [k, val]
