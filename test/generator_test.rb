@@ -33,6 +33,10 @@ c = 3
 
 [[foo.bar]]
     END
+
+    assert_equal(<<-'END', PerfectTOML.generate({ foo: [] }))
+foo = []
+    END
   end
 
   def test_quoted_key
