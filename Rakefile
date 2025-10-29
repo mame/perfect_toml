@@ -19,21 +19,47 @@ file TOML_TEST do
   end
 end
 
-task :toml_decoder_test => TOML_TEST do
+task :toml_decoder_1_0_test => TOML_TEST do
+  ENV["TOML_DECODER_VERSION"] = "1.0"
   sh TOML_TEST, "test", "-toml", "1.0", "-decoder", "./tool/decoder.rb"
 end
 
-task :toml_encoder_test => TOML_TEST do
+task :toml_decoder_1_1_test => TOML_TEST do
+  ENV["TOML_DECODER_VERSION"] = "1.1"
+  sh TOML_TEST, "test", "-toml", "1.1", "-decoder", "./tool/decoder.rb"
+end
+
+task :toml_encoder_1_0_test => TOML_TEST do
+  ENV["TOML_DECODER_VERSION"] = "1.0"
   ["0000", "1000", "0010", "0001", "0011"].each do |mode|
     ENV["TOML_ENCODER_USE_DOT"] = mode[0]
     ENV["TOML_ENCODER_SORT_KEYS"] = mode[1]
     ENV["TOML_ENCODER_USE_LITERAL_STRING"] = mode[2]
     ENV["TOML_ENCODER_USE_MULTILINE_STRING"] = mode[3]
+    ENV.delete("BURNTSUSHI_TOML_110") # https://github.com/toml-lang/toml-test/issues/173
     sh TOML_TEST, "test", "-toml", "1.0", "-decoder", "./tool/decoder.rb", "--encoder", "./tool/encoder.rb"
   end
 end
 
-task :test => [:core_test, :toml_decoder_test, :toml_encoder_test]
+task :toml_encoder_1_1_test => TOML_TEST do
+  ENV["TOML_DECODER_VERSION"] = "1.1"
+  ["0000", "1000", "0010", "0001", "0011"].each do |mode|
+    ENV["TOML_ENCODER_USE_DOT"] = mode[0]
+    ENV["TOML_ENCODER_SORT_KEYS"] = mode[1]
+    ENV["TOML_ENCODER_USE_LITERAL_STRING"] = mode[2]
+    ENV["TOML_ENCODER_USE_MULTILINE_STRING"] = mode[3]
+    ENV["BURNTSUSHI_TOML_110"] = "1" # https://github.com/toml-lang/toml-test/issues/173
+    sh TOML_TEST, "test", "-toml", "1.1", "-decoder", "./tool/decoder.rb", "--encoder", "./tool/encoder.rb"
+  end
+end
+
+task :test => [
+  :core_test,
+  :toml_decoder_1_0_test,
+  :toml_decoder_1_1_test,
+  :toml_encoder_1_0_test,
+  :toml_encoder_1_1_test,
+]
 
 task default: :test
 
