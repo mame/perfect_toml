@@ -81,4 +81,86 @@ a = { b = 1
       END
     end
   end
+
+  def test_toml_1_1_escaped_char_in_string
+    toml = <<-'END'.chomp
+a = "\e"
+    END
+
+    assert_parse_error("invalid escape character in string: \"e\" at line 1 column 7") do
+      PerfectTOML.parse(toml, version: "1.0.0")
+    end
+
+    exp = { "a" => "\e" }
+    assert_equal(exp, PerfectTOML.parse(toml, version: "1.1.0"))
+
+    toml = <<-'END'.chomp
+a = "\x20"
+    END
+
+    assert_parse_error("invalid escape character in string: \"x\" at line 1 column 7") do
+      PerfectTOML.parse(toml, version: "1.0.0")
+    end
+
+    exp = { "a" => " " }
+    assert_equal(exp, PerfectTOML.parse(toml, version: "1.1.0"))
+  end
+
+  def test_toml_1_1_omittable_seconds_in_datetime
+    toml = <<-'END'.chomp
+a = 2001-02-03T04:05Z
+    END
+
+    assert_parse_error("seconds field is required at line 1 column 22") do
+      PerfectTOML.parse(toml, version: "1.0.0")
+    end
+
+    exp = { "a" => Time.utc(2001, 2, 3, 4, 5, 0) }
+    assert_equal(exp, PerfectTOML.parse(toml, version: "1.1.0"))
+
+    toml = <<-'END'.chomp
+a = 04:05
+    END
+
+    assert_parse_error("seconds field is required at line 1 column 10") do
+      PerfectTOML.parse(toml, version: "1.0.0")
+    end
+
+    exp = { "a" => PerfectTOML::LocalTime.new(4, 5, 0) }
+    assert_equal(exp, PerfectTOML.parse(toml, version: "1.1.0"))
+  end
+
+  def test_toml_1_1_newline_in_inline_table
+    toml = <<-'END'.chomp
+foo = {
+      bar
+    =
+  {
+    baz
+    =
+    1
+    ,
+  }
+,
+qux # comment
+  =   # comment
+    2   # comment
+      ,   # comment
+        }
+    END
+
+    assert_parse_error("unexpected character found: \"\\n\" at line 1 column 8") do
+      PerfectTOML.parse(toml, version: "1.0.0")
+    end
+
+    exp = { "foo" => { "bar" => { "baz" => 1 }, "qux" => 2 } }
+
+    assert_equal(exp, PerfectTOML.parse(toml, version: "1.1.0"))
+  end
+
+  def test_unsupported_toml_version
+    assert_raise(ArgumentError, "unsupported TOML version: \"0.5.0\"") do
+      PerfectTOML.parse("", version: "0.5.0")
+    end
+  end
 end
