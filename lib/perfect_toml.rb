@@ -137,7 +137,6 @@ module PerfectTOML
     end
   end
 
-
   # Represents TOML's Local Time
   #
   # See https://toml.io/en/v1.0.0#local-time
