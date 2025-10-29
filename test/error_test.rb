@@ -55,7 +55,7 @@ a = { b = 1, b = 2 }
     end
 
     assert_parse_error("invalid escape character in string: \"e\" at line 1 column 7") do
-      PerfectTOML.parse(<<-'END')
+      PerfectTOML.parse(<<-'END', version: "1.0.0")
 a = "\e"
       END
     end
