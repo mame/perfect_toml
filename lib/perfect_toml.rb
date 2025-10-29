@@ -179,7 +179,7 @@ module PerfectTOML
 
   # call-seq:
   #
-  #   parse(toml_src, symbolize_names: boolean) -> Object
+  #   parse(toml_src, version: String, symbolize_names: boolean) -> Object
   #
   # Decodes a TOML string.
   #
@@ -190,6 +190,10 @@ module PerfectTOML
   #     bar = "baz"
   #   END
   #   PerfectTOML.parse(src)  #=> { "foo" => { "bar" => "baz" } }
+  #
+  # The keyword `version` specifies the TOML version to parse.
+  # Supported versions are "1.0.0" and "1.1.0" (which isn't released yet and may change).
+  # Defaults to "1.0.0", but the default will change in future releases.
   #
   # All keys in the Hash are String by default.
   # If a keyword `symbolize_names` is specficied as truthy,
@@ -202,8 +206,14 @@ module PerfectTOML
   #     bar = "baz"
   #   END
   #   PerfectTOML.parse(src, symbolize_names: true)  #=> { :key => { :bar => "baz" } }
-  def self.parse(toml_src, **opts)
-    Parser.new(toml_src, **opts).parse
+  def self.parse(toml_src, version: "1.0.0", symbolize_names: false)
+    case version
+    when "1.0", "1.0.0" then version = :TOML_1_0_0
+    when "1.1", "1.1.0" then version = :TOML_1_1_0
+    else
+      raise ArgumentError, "unsupported TOML version: #{ version.inspect }"
+    end
+    Parser.new(toml_src, version, symbolize_names).parse
   end
 
   # call-seq:
@@ -311,10 +321,22 @@ module PerfectTOML
   class ParseError < StandardError; end
 
   class Parser # :nodoc:
-    def initialize(src, symbolize_names: false)
+    def initialize(src, version, symbolize_names)
       @s = StringScanner.new(src)
       @symbolize_names = symbolize_names
       @root_node = @topic_node = Node.new(1, nil)
+
+      @re_escape_char = version == :TOML_1_0_0 ?
+        /([btnmfr"\\])|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})/ :
+        /([btnmfre"\\])|x([0-9A-Fa-f]{2})|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})/
+      @re_multiline_basic_string = version == :TOML_1_0_0 ?
+        /[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f"\\]*/ :
+        /([^\x00-\x08\x0b-\x1f\x7f"\\]|\r\n)*/
+      @re_multiline_literal_string = version == :TOML_1_0_0 ?
+        /[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f']*/ :
+        /([^\x00-\x08\x0b-\x1f\x7f']|\r\n)*/
+      @omitted_seconds = version != :TOML_1_0_0 ? "0" : nil
+      @allow_newline_in_inline_table = version != :TOML_1_0_0
     end
 
     def parse
@@ -384,13 +406,13 @@ module PerfectTOML
     # parsing for strings
 
     ESCAPE_CHARS = {
-      ?b => ?\b, ?t => ?\t, ?n => ?\n, ?f => ?\f, ?r => ?\r, ?" => ?", ?\\ => ?\\
+      ?b => ?\b, ?t => ?\t, ?n => ?\n, ?f => ?\f, ?r => ?\r, ?e => ?\e, ?" => ?", ?\\ => ?\\
     }
 
     def parse_escape_char
       if @s.skip(/\\/)
-        if @s.skip(/([btnmfr"\\])|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})/)
-          @s[1] ? ESCAPE_CHARS[@s[1]] : (@s[2] || @s[3]).hex.chr("UTF-8")
+        if @s.skip(@re_escape_char)
+          @s[1] ? ESCAPE_CHARS[@s[1]] : (@s[2] || @s[3] || @s[4]).hex.chr("UTF-8")
         else
           unterminated_string_error if @s.eos?
           error "invalid escape character in string: #{ @s.peek(1).dump }"
@@ -416,7 +438,7 @@ module PerfectTOML
 
       str = +""
       while true
-        str << @s.scan(/[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f"\\]*/)
+        str << @s.scan(@re_multiline_basic_string)
         delimiter = @s.skip(/"{1,5}/)
         if delimiter
           str << "\"" * (delimiter % 3)
@@ -441,7 +463,7 @@ module PerfectTOML
 
       str = +""
       while true
-        str << @s.scan(/[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f']*/)
+        str << @s.scan(@re_multiline_literal_string)
         if delimiter = @s.skip(/'{1,5}/)
           str << "'" * (delimiter % 3)
           return str if delimiter >= 3
@@ -457,7 +479,7 @@ module PerfectTOML
     def parse_datetime(preread_len)
       date = LocalDate.new(@s[1], @s[2], @s[3])
       if @s[4]
-        time = LocalTime.new(@s[4], @s[5], @s[6])
+        time = LocalTime.new(@s[4], @s[5], @s[6] || @omitted_seconds || error("seconds field is required"))
         datetime = LocalDateTime.new(date, time)
         zone = @s[7]
         datetime = datetime.to_time(zone == "z" ? "Z" : zone) if zone
@@ -471,8 +493,7 @@ module PerfectTOML
     end
 
     def parse_time(preread_len)
-      hour, min, sec = @s[1], @s[2], @s[3]
-      LocalTime.new(hour, min, sec)
+      LocalTime.new(@s[1], @s[2], @s[3] || @omitted_seconds || error("seconds field is required"))
     rescue ArgumentError
       @s.pos -= preread_len
       error "failed to parse time \"#{ @s[0] }\""
@@ -494,8 +515,16 @@ module PerfectTOML
       ary
     end
 
+    def skip_inline_table_spaces
+      if @allow_newline_in_inline_table
+        skip_spaces
+      else
+        @s.skip(/[\t ]*/)
+      end
+    end
+
     def parse_inline_table
-      @s.skip(/[\t ]*/)
+      skip_inline_table_spaces
       if @s.skip(/\}/)
         {}
       else
@@ -503,13 +532,14 @@ module PerfectTOML
         while true
           @keys_start_pos = @s.pos
           keys = parse_keys
-          @s.skip(/[\t ]*/)
-          unexpected_error unless @s.skip(/=[\t ]*/)
+          skip_inline_table_spaces
+          unexpected_error unless @s.skip(/=/)
+          skip_inline_table_spaces
           define_value(tmp_node, keys)
-          @s.skip(/[\t ]*/)
-          next if @s.skip(/,[\t ]*/)
-          break if @s.skip(/\}/)
-          unexpected_error
+          skip_inline_table_spaces
+          skip_inline_table_spaces if comma_seen = @s.skip(/,/)
+          break if (@allow_newline_in_inline_table || !comma_seen) && @s.skip(/\}/)
+          unexpected_error unless comma_seen
         end
         tmp_node.table
       end
@@ -545,9 +575,9 @@ module PerfectTOML
         @s.skip(/""/) ? parse_multiline_basic_string : parse_basic_string
       when @s.skip(/'/)
         @s.skip(/''/) ? parse_multiline_literal_string : parse_literal_string
-      when len = @s.skip(/(-?\d{4})-(\d{2})-(\d{2})(?:[tT ](\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)([zZ]|[-+]\d{2}:\d{2})?)?/)
+      when len = @s.skip(/(-?\d{4})-(\d{2})-(\d{2})(?:[tT ](\d{2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?([zZ]|[-+]\d{2}:\d{2})?)?/)
         parse_datetime(len)
-      when len = @s.skip(/(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/)
+      when len = @s.skip(/(\d{2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?/)
         parse_time(len)
       when val = @s.scan(/0x\h(?:_?\h)*|0o[0-7](?:_?[0-7])*|0b[01](?:_?[01])*/)
         Integer(val)
