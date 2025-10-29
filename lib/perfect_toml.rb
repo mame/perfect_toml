@@ -63,15 +63,16 @@ module PerfectTOML
   # See https://toml.io/en/v1.0.0#local-date-time
   class LocalDateTime < LocalDateTimeBase
     def initialize(year, month, day, hour, min, sec)
-      @year = year.to_i
-      @month = month.to_i
-      @day = day.to_i
-      @hour = hour.to_i
-      @min = min.to_i
-      @sec = Numeric === sec ? sec : sec.include?(".") ? Rational(sec) : sec.to_i
+      @date = LocalDate.new(year, month, day)
+      @time = LocalTime.new(hour, min, sec)
     end
 
-    attr_reader :year, :month, :day, :hour, :min, :sec
+    def year = @date.year
+    def month = @date.month
+    def day = @date.day
+    def hour = @time.hour
+    def min = @time.min
+    def sec = @time.sec
 
     # Converts to a Time object with the local timezone.
     #
@@ -83,7 +84,7 @@ module PerfectTOML
     #   ldt.to_time("UTC")    #=> 1970-01-01 02:03:04 UTC
     #   ldt.to_time("+00:00") #=> 1970-01-01 02:03:04 +0000
     def to_time(zone = nil)
-      @time = Time.new(@year, @month, @day, @hour, @min, @sec, zone)
+      Time.new(@date.year, @date.month, @date.day, @time.hour, @time.min, @time.sec, zone)
     end
 
     # Returns a string representation in RFC 3339 format
@@ -91,9 +92,7 @@ module PerfectTOML
     #   ldt = PerfectTOML::LocalDateTime.new(1970, 1, 1, 2, 3, 4)
     #   ldt.to_s #=> 1970-01-01T02:03:04
     def to_s
-      s = "%04d-%02d-%02dT%02d:%02d:%02d" % [@year, @month, @day, @hour, @min, @sec]
-      s << ("%11.9f" % (@sec - @sec.floor))[1..] unless Integer === @sec
-      s
+      @date.to_s + "T" + @time.to_s
     end
   end
 
@@ -101,10 +100,15 @@ module PerfectTOML
   #
   # See https://toml.io/en/v1.0.0#local-date
   class LocalDate < LocalDateTimeBase
+    DAYS_IN_MONTH = [31, nil, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
     def initialize(year, month, day)
       @year = year.to_i
       @month = month.to_i
+      raise ArgumentError, "month must be in 1..12" unless 1 <= @month && @month <= 12
       @day = day.to_i
+      max_day = DAYS_IN_MONTH[@month - 1] || (@year % 4 == 0 && (@year % 100 != 0 || @year % 400 == 0) ? 29 : 28)
+      raise ArgumentError, "day must be in 1..#{ max_day }" unless 1 <= @day && @day <= max_day
     end
 
     attr_reader :year, :month, :day
@@ -139,8 +143,11 @@ module PerfectTOML
   class LocalTime < LocalDateTimeBase
     def initialize(hour, min, sec)
       @hour = hour.to_i
+      raise ArgumentError, "hour must be in 0..23" unless 0 <= @hour && @hour <= 23
       @min = min.to_i
+      raise ArgumentError, "min must be in 0..59" unless 0 <= @min && @min <= 59
       @sec = Numeric === sec ? sec : sec.include?(".") ? Rational(sec) : sec.to_i
+      raise ArgumentError, "sec must be in 0..60" unless 0 <= @sec && @sec <= 60
     end
 
     attr_reader :hour, :min, :sec
@@ -455,15 +462,14 @@ module PerfectTOML
         str << @s[0]
         hour, min, sec = @s[1], @s[2], @s[3]
         raise ArgumentError unless (0..23).cover?(hour.to_i)
+        datetime = LocalDateTime.new(year, month, day, hour, min, sec)
         zone = @s.scan(/(Z)|[-+]\d{2}:\d{2}/i)
-        time = Time.new(year, month, day, hour, min, sec.to_r, @s[1] ? "UTC" : zone)
         if zone
-          time
+          datetime.to_time(zone == "z" ? "Z" : zone)
         else
-          LocalDateTime.new(year, month, day, hour, min, sec)
+          datetime
         end
       else
-        Time.new(year, month, day, 0, 0, 0, "Z") # parse check
         LocalDate.new(year, month, day)
       end
     rescue ArgumentError
@@ -473,7 +479,6 @@ module PerfectTOML
 
     def parse_time(preread_len)
       hour, min, sec = @s[1], @s[2], @s[3]
-      Time.new(1970, 1, 1, hour, min, sec.to_r, "Z") # parse check
       LocalTime.new(hour, min, sec)
     rescue ArgumentError
       @s.pos -= preread_len
