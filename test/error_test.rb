@@ -112,7 +112,7 @@ a = '''unterminated
   end
 
   def test_wrong_offset_datetime
-    assert_parse_error("failed to parse date or datetime \"2000-00-00T25:00:00\" at line 1 column 9") do
+    assert_parse_error("failed to parse date or datetime \"2000-00-00T25:00:00Z\" at line 1 column 9") do
       PerfectTOML.parse(<<-'END')
 wrong = 2000-00-00T25:00:00Z
       END

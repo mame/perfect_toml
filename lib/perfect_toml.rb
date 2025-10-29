@@ -62,9 +62,10 @@ module PerfectTOML
   #
   # See https://toml.io/en/v1.0.0#local-date-time
   class LocalDateTime < LocalDateTimeBase
-    def initialize(year, month, day, hour, min, sec)
-      @date = LocalDate.new(year, month, day)
-      @time = LocalTime.new(hour, min, sec)
+    def initialize(*args)
+      @date = args[0].is_a?(LocalDate) ? args.shift : LocalDate.new(args.shift, args.shift, args.shift)
+      @time = args[0].is_a?(LocalTime) ? args.shift : LocalTime.new(args.shift, args.shift, args.shift)
+      raise ArgumentError, "wrong number of arguments" unless args.empty?
     end
 
     def year = @date.year
@@ -92,7 +93,7 @@ module PerfectTOML
     #   ldt = PerfectTOML::LocalDateTime.new(1970, 1, 1, 2, 3, 4)
     #   ldt.to_s #=> 1970-01-01T02:03:04
     def to_s
-      @date.to_s + "T" + @time.to_s
+      "#{ @date }T#{ @time }"
     end
   end
 
@@ -455,26 +456,19 @@ module PerfectTOML
     # parsing for date/time
 
     def parse_datetime(preread_len)
-      str = @s[0]
-      pos = @s.pos - preread_len
-      year, month, day = @s[1], @s[2], @s[3]
-      if @s.skip(/[T ](\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/i)
-        str << @s[0]
-        hour, min, sec = @s[1], @s[2], @s[3]
-        raise ArgumentError unless (0..23).cover?(hour.to_i)
-        datetime = LocalDateTime.new(year, month, day, hour, min, sec)
-        zone = @s.scan(/(Z)|[-+]\d{2}:\d{2}/i)
-        if zone
-          datetime.to_time(zone == "z" ? "Z" : zone)
-        else
-          datetime
-        end
+      date = LocalDate.new(@s[1], @s[2], @s[3])
+      if @s[4]
+        time = LocalTime.new(@s[4], @s[5], @s[6])
+        datetime = LocalDateTime.new(date, time)
+        zone = @s[7]
+        datetime = datetime.to_time(zone == "z" ? "Z" : zone) if zone
+        datetime
       else
-        LocalDate.new(year, month, day)
+        date
       end
     rescue ArgumentError
-      @s.pos = pos
-      error "failed to parse date or datetime \"#{ str }\""
+      @s.pos -= preread_len
+      error "failed to parse date or datetime \"#{ @s[0] }\""
     end
 
     def parse_time(preread_len)
@@ -552,7 +546,7 @@ module PerfectTOML
         @s.skip(/""/) ? parse_multiline_basic_string : parse_basic_string
       when @s.skip(/'/)
         @s.skip(/''/) ? parse_multiline_literal_string : parse_literal_string
-      when len = @s.skip(/(-?\d{4})-(\d{2})-(\d{2})/)
+      when len = @s.skip(/(-?\d{4})-(\d{2})-(\d{2})(?:[tT ](\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)([zZ]|[-+]\d{2}:\d{2})?)?/)
         parse_datetime(len)
       when len = @s.skip(/(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/)
         parse_time(len)
