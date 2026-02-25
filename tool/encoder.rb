@@ -44,4 +44,4 @@ opts = {
   use_literal_string: ENV["TOML_ENCODER_USE_LITERAL_STRING"] == "1",
   use_multiline_string: ENV["TOML_ENCODER_USE_MULTILINE_STRING"] == "1",
 }
-puts PerfectTOML.generate(convert(JSON.parse($stdin.read)), **opts)
+puts PerfectTOML.generate(convert(JSON.parse($stdin.read.force_encoding("UTF-8"))), **opts)
