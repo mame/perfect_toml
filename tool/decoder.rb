@@ -32,4 +32,4 @@ def convert(toml)
   end
 end
 
-puts JSON.generate(convert(PerfectTOML.parse($stdin.read)))
+puts JSON.generate(convert(PerfectTOML.parse($stdin.read.force_encoding("UTF-8"))))
