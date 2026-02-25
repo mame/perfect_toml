@@ -23,7 +23,7 @@
 require "strscan"
 
 module PerfectTOML
-  VERSION = "0.9.0"
+  VERSION = "0.9.1"
 
   class LocalDateTimeBase
     def to_inline_toml
