@@ -783,7 +783,7 @@ module PerfectTOML
   end
 
   class Generator # :nodoc:
-    def initialize(obj, out, sort_keys: false, use_literal_string: false, use_multiline_string: false, use_dot: false)
+    def initialize(obj, out, sort_keys: false, use_literal_string: false, use_multiline_string: false, use_dot: false, indent: 0)
       @obj = obj.to_hash
       @out = out
       @first_output = true
@@ -792,10 +792,11 @@ module PerfectTOML
       @use_literal_string = use_literal_string
       @use_multiline_string = use_multiline_string
       @use_dot = use_dot
+      @indent = indent
     end
 
     def generate
-      generate_hash(@obj, "", false)
+      generate_hash(@obj, "", false, 0)
       @out
     end
 
@@ -845,7 +846,11 @@ module PerfectTOML
       end
     end
 
-    def generate_hash(hash, path, array_type)
+    def whitespace(level)
+      " " * @indent * level
+    end
+
+    def generate_hash(hash, path, array_type, level)
       values = []
       children = []
       dup_check = {}
@@ -885,9 +890,9 @@ module PerfectTOML
       if !path.empty? && (!values.empty? || hash.empty?) || array_type
         @out << "\n" unless @first_output
         if array_type
-          @out << "[[" << path << "]]\n"
+          @out << whitespace(level - 1) << "[[" << path << "]]\n"
         else
-          @out << "[" << path << "]\n"
+          @out << whitespace(level) << "[" << path << "]\n"
         end
         @first_output = false
       end
@@ -895,7 +900,7 @@ module PerfectTOML
       unless values.empty?
         values = values.sort if @sort_keys
         values.each do |key, val|
-          @out << key << " = "
+          @out << whitespace(level + 1) << key << " = "
           generate_value(val)
           @out << "\n"
         end
@@ -907,10 +912,10 @@ module PerfectTOML
         children.each do |type, key, val|
           path2 = path.empty? ? key : path + "." + key
           if type == :table
-            generate_hash(val, path2, false)
+            generate_hash(val, path2, false, level)
           else
             val.each do |hash|
-              generate_hash(hash, path2, true)
+              generate_hash(hash, path2, true, level + 1)
             end
           end
         end
