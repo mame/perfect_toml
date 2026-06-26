@@ -8,12 +8,15 @@ Rake::TestTask.new(:core_test) do |t|
   t.test_files = FileList["test/**/*_test.rb"]
 end
 
-TOML_TEST = "./toml-test-v2.1.0-linux-amd64"
+TOML_TEST = "./toml-test-v2.2.0-linux-amd64"
 
 file TOML_TEST do
   require "open-uri"
   require "zlib"
-  URI.open("https://github.com/toml-lang/toml-test/releases/download/v2.1.0/toml-test-v2.1.0-linux-amd64.gz", "rb") do |f|
+  name = File.basename(TOML_TEST)
+  version = name[/v\d+\.\d+\.\d+/]
+  url = "https://github.com/toml-lang/toml-test/releases/download/#{ version }/#{ name }.gz"
+  URI.open(url, "rb") do |f|
     File.binwrite(TOML_TEST, Zlib::GzipReader.new(f).read)
     File.chmod(0o755, TOML_TEST)
   end
