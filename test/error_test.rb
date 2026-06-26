@@ -160,4 +160,21 @@ wrong = 25:00:00
       END
     end
   end
+
+  def test_year_must_be_four_digits
+    # TOML requires dates to follow RFC 3339, whose grammar defines
+    # `date-fullyear = 4DIGIT`. The year is therefore exactly 4 digits
+    # with no sign, so neither a leading sign nor a 5-digit year is allowed.
+    assert_parse_error("unexpected identifier found: \"001-01-01\" at line 1 column 11") do
+      PerfectTOML.parse(<<-'END')
+wrong = -0001-01-01
+      END
+    end
+
+    assert_parse_error("unexpected identifier found: \"-01-01\" at line 1 column 14") do
+      PerfectTOML.parse(<<-'END')
+wrong = 10000-01-01
+      END
+    end
+  end
 end

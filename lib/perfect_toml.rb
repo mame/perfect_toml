@@ -584,7 +584,7 @@ module PerfectTOML
         @s.skip(/""/) ? parse_multiline_basic_string : parse_basic_string
       when @s.skip(/'/)
         @s.skip(/''/) ? parse_multiline_literal_string : parse_literal_string
-      when len = @s.skip(/(-?\d{4})-(\d{2})-(\d{2})(?:[tT ](\d{2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?([zZ]|[-+]\d{2}:\d{2})?)?/)
+      when len = @s.skip(/(\d{4})-(\d{2})-(\d{2})(?:[tT ](\d{2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?([zZ]|[-+]\d{2}:\d{2})?)?/)
         parse_datetime(len)
       when len = @s.skip(/(\d{2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?/)
         parse_time(len)
