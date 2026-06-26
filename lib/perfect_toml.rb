@@ -192,7 +192,7 @@ module PerfectTOML
   #   PerfectTOML.parse(src)  #=> { "foo" => { "bar" => "baz" } }
   #
   # The keyword `version` specifies the TOML version to parse.
-  # Supported versions are "1.0.0" and "1.1.0" (which isn't released yet and may change).
+  # Supported versions are "1.0.0" and "1.1.0".
   # Defaults to "1.0.0", but the default will change in future releases.
   #
   # All keys in the Hash are String by default.

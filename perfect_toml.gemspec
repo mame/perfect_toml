@@ -8,10 +8,10 @@ Gem::Specification.new do |spec|
   spec.authors = ["Yusuke Endoh"]
   spec.email = ["mame@ruby-lang.org"]
 
-  spec.summary = "A fast TOML parser gem fully compliant with TOML v1.0.0"
+  spec.summary = "A fast TOML parser gem fully compliant with TOML v1.0.0 and v1.1.0"
   spec.description = <<END
 PerfectTOML is yet another TOML parser.
-It is fully compliant with TOML v1.0.0, and faster than existing TOML parsers for Ruby.
+It is fully compliant with TOML v1.0.0 and v1.1.0, and faster than existing TOML parsers for Ruby.
 END
   spec.homepage = "https://github.com/mame/perfect_toml"
   spec.license = "MIT"
