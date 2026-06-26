@@ -1,28 +1,53 @@
 module PerfectTOML
   VERSION: String
 
-  def self.parse: (String toml_src, symbolize_names: bool) -> untyped
-  def self.load_file: (String filename, symbolize_names: bool) -> untyped
-                    | (IO io, symbolize_names: bool) -> untyped
-  def self.generate: (untyped data, sort_keys: boolean, use_literal_string: boolean, use_multiline_string: boolean, use_dot: boolean) -> String
-  def self.save_file: (String filename, untyped data, sort_keys: boolean, use_literal_string: boolean, use_multiline_string: boolean, use_dot: boolean) -> void
-                    | (IO io, untyped data, sort_keys: boolean, use_literal_string: boolean, use_multiline_string: boolean, use_dot: boolean) -> void
+  def self.parse: (String toml_src, ?version: String, ?symbolize_names: bool) -> untyped
+  def self.load_file: (String filename, ?version: String, ?symbolize_names: bool) -> untyped
+                    | (IO io, ?version: String, ?symbolize_names: bool) -> untyped
+  def self.generate: (untyped data, ?sort_keys: bool, ?use_literal_string: bool, ?use_multiline_string: bool, ?use_dot: bool) -> String
+  def self.save_file: (String filename, untyped data, ?sort_keys: bool, ?use_literal_string: bool, ?use_multiline_string: bool, ?use_dot: bool) -> void
+                    | (IO io, untyped data, ?sort_keys: bool, ?use_literal_string: bool, ?use_multiline_string: bool, ?use_dot: bool) -> void
 
-  class LocalDateTime
-    def initialize: (untyped year, untyped month, untyped day, untyped hour, untyped min, untyped sec) -> void
-    def to_time: (?String zone) -> Time
-    def to_inline_toml: -> String
+  class ParseError < StandardError
   end
 
-  class LocalDate
+  class LocalDateTimeBase
+    include Comparable
+
+    def to_inline_toml: -> String
+    def <=>: (untyped other) -> Integer?
+  end
+
+  class LocalDateTime < LocalDateTimeBase
+    def initialize: (LocalDate date, LocalTime time) -> void
+                  | (untyped year, untyped month, untyped day, untyped hour, untyped min, untyped sec) -> void
+    def year: -> Integer
+    def month: -> Integer
+    def day: -> Integer
+    def hour: -> Integer
+    def min: -> Integer
+    def sec: -> Numeric
+    def to_time: (?String? zone) -> Time
+    def to_s: -> String
+  end
+
+  class LocalDate < LocalDateTimeBase
+    DAYS_IN_MONTH: Array[Integer?]
+
     def initialize: (untyped year, untyped month, untyped day) -> void
-    def to_time: (?String zone) -> Time
-    def to_inline_toml: -> String
+    attr_reader year: Integer
+    attr_reader month: Integer
+    attr_reader day: Integer
+    def to_time: (?String? zone) -> Time
+    def to_s: -> String
   end
 
-  class LocalTime
+  class LocalTime < LocalDateTimeBase
     def initialize: (untyped hour, untyped min, untyped sec) -> void
-    def to_time: (?String zone) -> Time
-    def to_inline_toml: -> String
+    attr_reader hour: Integer
+    attr_reader min: Integer
+    attr_reader sec: Numeric
+    def to_time: (Integer year, Integer month, Integer day, ?String? zone) -> Time
+    def to_s: -> String
   end
 end
