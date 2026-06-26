@@ -4,7 +4,7 @@ Yet another [TOML](https://github.com/toml-lang/toml) parser and generator.
 
 Features:
 
-* Fully compliant with [TOML v1.0.0](https://toml.io/en/v1.0.0). It passes [toml-lang/toml-test](https://github.com/toml-lang/toml-test).
+* Fully compliant with [TOML v1.0.0](https://toml.io/en/v1.0.0) and [TOML v1.1.0](https://toml.io/en/v1.1.0). It passes [toml-lang/toml-test](https://github.com/toml-lang/toml-test).
 * Faster than existing TOML parsers for Ruby. See [Benchmark](#benchmark).
 * Single-file, plain old Ruby script without any dependencies: [perfect_toml.rb](https://github.com/mame/perfect_toml/blob/master/lib/perfect_toml.rb).
 
@@ -31,6 +31,20 @@ PerfectTOML.load_file("file.toml")
 
 # If you want Symbol keys:
 PerfectTOML.load_file("file.toml", symbolize_names: true)
+```
+
+## TOML version
+
+By default, PerfectTOML parses input as TOML v1.0.0.
+You can select the TOML version by passing the `version` keyword.
+Supported values are `"1.0.0"` (default) and `"1.1.0"`.
+
+```ruby
+require "perfect_toml"
+
+# Parse as TOML v1.1.0 (e.g., allows newlines in inline tables, the \e escape, etc.)
+PerfectTOML.parse(src, version: "1.1.0")
+PerfectTOML.load_file("file.toml", version: "1.1.0")
 ```
 
 ## Generator Usage
