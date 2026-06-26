@@ -327,8 +327,8 @@ module PerfectTOML
       @root_node = @topic_node = Node.new(1, nil)
 
       @re_escape_char = version == :TOML_1_0_0 ?
-        /([btnmfr"\\])|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})/ :
-        /([btnmfre"\\])|x([0-9A-Fa-f]{2})|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})/
+        /([btnfr"\\])|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})/ :
+        /([btnfre"\\])|x([0-9A-Fa-f]{2})|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})/
       @re_multiline_basic_string = version == :TOML_1_0_0 ?
         /[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f"\\]*/ :
         /([^\x00-\x08\x0b-\x1f\x7f"\\]|\r\n)*/
@@ -412,7 +412,16 @@ module PerfectTOML
     def parse_escape_char
       if @s.skip(/\\/)
         if @s.skip(@re_escape_char)
-          @s[1] ? ESCAPE_CHARS[@s[1]] : (@s[2] || @s[3] || @s[4]).hex.chr("UTF-8")
+          if @s[1]
+            ESCAPE_CHARS[@s[1]]
+          else
+            code = (@s[2] || @s[3] || @s[4]).hex
+            begin
+              code.chr("UTF-8")
+            rescue RangeError
+              error "invalid Unicode scalar value in string: U+%04X" % code
+            end
+          end
         else
           unterminated_string_error if @s.eos?
           error "invalid escape character in string: #{ @s.peek(1).dump }"

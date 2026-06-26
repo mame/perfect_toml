@@ -60,6 +60,24 @@ a = "\e"
       END
     end
 
+    assert_parse_error("invalid escape character in string: \"m\" at line 1 column 7") do
+      PerfectTOML.parse(<<-'END')
+a = "\m"
+      END
+    end
+
+    assert_parse_error("invalid Unicode scalar value in string: U+D800 at line 1 column 12") do
+      PerfectTOML.parse(<<-'END')
+a = "\uD800"
+      END
+    end
+
+    assert_parse_error("invalid Unicode scalar value in string: U+110000 at line 1 column 16") do
+      PerfectTOML.parse(<<-'END')
+a = "\U00110000"
+      END
+    end
+
     assert_parse_error("invalid character in string: \"\\x00\" at line 1 column 31") do
       PerfectTOML.parse(<<-END)
 a = "raw control character -> \0"
